@@ -3,6 +3,7 @@ package dk.darknight.scientist;
 import java.util.Comparator;
 
 import com.google.common.base.Function;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Supplier;
 
 import dk.darknight.scientist.functions.DoubleAction;
@@ -60,10 +61,10 @@ class Observation<T, TClean> {
                 valuesAreEqual = comparator.compare(other.value, value) == 0;
             }
             
-            boolean exceptionsAreEquivalent =
-                    bothRaised &&
-                    other.exception.getClass().equals(exception.getClass()) &&
-                    other.exception.getMessage() == exception.getMessage();
+			boolean exceptionsAreEquivalent = bothRaised && 
+					other.exception.getClass().equals(exception.getClass()) && 
+					MoreObjects.firstNonNull(other.exception.getMessage(), "")
+							.equals(MoreObjects.firstNonNull(exception.getMessage(), ""));
 
             return (neitherRaised && valuesAreEqual) ||
                     (bothRaised && exceptionsAreEquivalent);

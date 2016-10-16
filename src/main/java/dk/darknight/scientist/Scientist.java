@@ -3,6 +3,7 @@ package dk.darknight.scientist;
 
 import com.google.common.base.Functions;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 
 import dk.darknight.scientist.functions.Action;
 import dk.darknight.scientist.functions.ExperimentFunction;
@@ -16,12 +17,7 @@ import lombok.val;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class Scientist {
-	private static Supplier<Boolean> enabled = new Supplier<Boolean>() {		
-		@Override
-		public Boolean get() {
-			return true;
-		}
-	};
+	private static Supplier<Boolean> enabled = Suppliers.ofInstance(true);
 	
 	private static <T, TClean> Experiment<T, TClean> build(String name, int concurrentTasks, Action<IExperiment<T>> experiment) {
 		val experimentBuilder = new Experiment<T, TClean>(name, enabled, concurrentTasks);

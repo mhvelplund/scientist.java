@@ -13,27 +13,22 @@ import lombok.NonNull;
 class Experiment<T, TClean> implements IExperiment<T> {
 	private final class DefaultComparator implements Comparator<T> {
 		private static final int EQUAL = 0;
-		private static final int NOT_EQUAL = -1; // False is always -1, regardless of actual result
+		private static final int NOT_EQUAL = -1; // False is always -1,
+													// regardless of actual
+													// result
 
 		@Override
 		public int compare(T o1, T o2) {
-			boolean equal = (o1 == null && o2 == null) ||
-					(o1 != null && o1.equals(o2));
-			
-			return equal ? EQUAL : NOT_EQUAL; 
+			boolean equal = (o1 == null && o2 == null) || (o1 != null && o1.equals(o2));
+
+			return equal ? EQUAL : NOT_EQUAL;
 		}
 	}
 
-
 	private static final String CANDIDATE_EXPERIMENT_NAME = "candidate";
-	
-	private static final Supplier<Boolean> ALWAYS_RUN = new Supplier<Boolean>() {
-		@Override
-		public Boolean get() {
-			return true;
-		}
-	};
-	
+
+	private static final Supplier<Boolean> ALWAYS_RUN = Suppliers.ofInstance(true);
+
 	private static final DoubleAction<Operation, Exception> ALWAYS_THROW = new DoubleAction<Operation, Exception>() {
 		@Override
 		public Void apply(Operation op, Exception exception) {
@@ -45,7 +40,7 @@ class Experiment<T, TClean> implements IExperiment<T> {
 	private final Map<String, Supplier<T>> candidates;
 	private Function<T, ?> cleaner;
 	private Comparator<T> comparator = new DefaultComparator();
-	
+
 	private final int concurrentTasks;
 	private final Map<String, Object> contexts = new HashMap<>();
 	private Supplier<T> control;
@@ -93,10 +88,8 @@ class Experiment<T, TClean> implements IExperiment<T> {
 	}
 
 	public ExperimentInstance<T, TClean> build() {
-		final ExperimentSettings<T, TClean> settings = new ExperimentSettings<T, TClean>(beforeRun, candidates, cleaner,
-				comparator, concurrentTasks, contexts, control, enabled, ignores, name, runIf, thrown,
-				throwOnMismatches);
-		return new ExperimentInstance<>(settings);
+		return new ExperimentInstance<>(new ExperimentSettings<T, TClean>(beforeRun, candidates, cleaner, comparator,
+				concurrentTasks, contexts, control, enabled, ignores, name, runIf, thrown, throwOnMismatches));
 	}
 
 	@Override
