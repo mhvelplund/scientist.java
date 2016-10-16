@@ -6,12 +6,18 @@ import java.util.Map.Entry;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 
 import dk.darknight.scientist.functions.Action;
 import dk.darknight.scientist.functions.DoubleAction;
 import dk.darknight.scientist.functions.DoubleFunction;
-import lombok.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.ToString;
+import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Getter
 @ToString
 @EqualsAndHashCode
@@ -128,16 +134,21 @@ final class ExperimentInstance<T, TClean> {
 		
 		Result<T, TClean> result = new Result<T, TClean>(this, observations, controlObservation, contexts);
 
-//        try
-//        {
-//            // TODO: Make this Fire and forget so we don't have to wait for this
-//            // to complete before we return a result
-//            await Scientist.ResultPublisher.Publish(result);
-//        }
-//        catch (Exception ex)
-//        {
-//            Thrown(Operation.Publish, ex);
-//        }
+		try {
+//          // TODO: Make this Fire and forget so we don't have to wait for this
+//          // to complete before we return a result
+//          await Scientist.ResultPublisher.Publish(result);
+
+			ImmutableList<Observation<T, TClean>> mismatchedObservations = result.getMismatchedObservations();
+			if (!mismatchedObservations.isEmpty()) {
+				for (Observation<T, TClean> observation : mismatchedObservations) {
+					Object r = observation.isThrown() ? observation.getException() : observation.getValue();
+					log.debug("{} ({}ms): {}", observation.getName(), observation.getDuration(), r);
+				}
+			}
+		} catch (Exception e) {
+			thrown.apply(Operation.PUBLISH, e);
+		}
 
 		if (throwOnMismatches && result.isMismatched()) {
 			throw new MismatchException(name, result);

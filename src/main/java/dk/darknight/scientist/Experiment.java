@@ -3,9 +3,7 @@ package dk.darknight.scientist;
 import java.text.MessageFormat;
 import java.util.*;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
+import com.google.common.base.*;
 
 import dk.darknight.scientist.functions.Action;
 import dk.darknight.scientist.functions.DoubleAction;
@@ -13,19 +11,49 @@ import dk.darknight.scientist.functions.DoubleFunction;
 import lombok.NonNull;
 
 class Experiment<T, TClean> implements IExperiment<T> {
+	private final class DefaultComparator implements Comparator<T> {
+		private static final int EQUAL = 0;
+		private static final int NOT_EQUAL = -1; // False is always -1, regardless of actual result
+
+		@Override
+		public int compare(T o1, T o2) {
+			boolean equal = (o1 == null && o2 == null) ||
+					(o1 != null && o1.equals(o2));
+			
+			return equal ? EQUAL : NOT_EQUAL; 
+		}
+	}
+
+
 	private static final String CANDIDATE_EXPERIMENT_NAME = "candidate";
+	
+	private static final Supplier<Boolean> ALWAYS_RUN = new Supplier<Boolean>() {
+		@Override
+		public Boolean get() {
+			return true;
+		}
+	};
+	
+	private static final DoubleAction<Operation, Exception> ALWAYS_THROW = new DoubleAction<Operation, Exception>() {
+		@Override
+		public Void apply(Operation op, Exception exception) {
+			throw Throwables.propagate(exception);
+		}
+	};
+
 	private Action<Void> beforeRun;
 	private final Map<String, Supplier<T>> candidates;
 	private Function<T, ?> cleaner;
-	private Comparator<T> comparator;
+	private Comparator<T> comparator = new DefaultComparator();
+	
 	private final int concurrentTasks;
 	private final Map<String, Object> contexts = new HashMap<>();
 	private Supplier<T> control;
 	private final Supplier<Boolean> enabled;
 	private final List<DoubleFunction<T, T, Boolean>> ignores = new ArrayList<>();
 	private final String name;
-	private Supplier<Boolean> runIf;
-	private DoubleAction<Operation, Exception> thrown;
+	private Supplier<Boolean> runIf = ALWAYS_RUN;
+	private DoubleAction<Operation, Exception> thrown = ALWAYS_THROW;
 	private boolean throwOnMismatches;
 
 	public Experiment(@NonNull String name, @NonNull Supplier<Boolean> enabled, int concurrentTasks) {
@@ -62,6 +90,13 @@ class Experiment<T, TClean> implements IExperiment<T> {
 	@Override
 	public void beforeRun(@NonNull Action<Void> action) {
 		this.beforeRun = action;
+	}
+
+	public ExperimentInstance<T, TClean> build() {
+		final ExperimentSettings<T, TClean> settings = new ExperimentSettings<T, TClean>(beforeRun, candidates, cleaner,
+				comparator, concurrentTasks, contexts, control, enabled, ignores, name, runIf, thrown,
+				throwOnMismatches);
+		return new ExperimentInstance<>(settings);
 	}
 
 	@Override
@@ -102,12 +137,5 @@ class Experiment<T, TClean> implements IExperiment<T> {
 	@Override
 	public void use(@NonNull Supplier<T> control) {
 		this.control = control;
-	}
-
-	public ExperimentInstance<T, TClean> build() {
-		final ExperimentSettings<T, TClean> settings = new ExperimentSettings<T, TClean>(beforeRun, candidates, cleaner,
-				comparator, concurrentTasks, contexts, control, enabled, ignores, name, runIf, thrown,
-				throwOnMismatches);
-		return new ExperimentInstance<>(settings);
 	}
 }
