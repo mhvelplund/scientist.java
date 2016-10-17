@@ -29,7 +29,7 @@ public class ScientistTest {
 	public void testScienceMisMatch() {
 		Scientist.setEnabled(enabled);
 		Scientist.science("widget-permissions", new ExperimentFunction<Boolean>() {
-			public void run(IExperiment<Boolean> experiment) {
+			public void apply(IExperiment<Boolean> experiment) {
 				experiment.use(new Supplier<Boolean>() {
 					public Boolean get() {
 						return isNotCollaborator(user);
@@ -53,7 +53,7 @@ public class ScientistTest {
 	public void testScienceMatch() {
 		Scientist.setEnabled(enabled);
 		boolean isCollaborator = Scientist.science("widget-permissions", new ExperimentFunction<Boolean>() {
-			public void run(IExperiment<Boolean> experiment) {
+			public void apply(IExperiment<Boolean> experiment) {
 				experiment.compare(new Comparator<Boolean>() {
 					public int compare(Boolean o1, Boolean o2) {
 						return o1.compareTo(!o2); // Reverse comparator
@@ -83,7 +83,7 @@ public class ScientistTest {
 	public void testScienceNotEnabled() {
 		Scientist.setEnabled(Suppliers.ofInstance(false));
 		Scientist.science("widget-permissions", new ExperimentFunction<Boolean>() {
-			public void run(IExperiment<Boolean> experiment) {
+			public void apply(IExperiment<Boolean> experiment) {
 				experiment.use(new Supplier<Boolean>() {
 					public Boolean get() {
 						return isNotCollaborator(user);
