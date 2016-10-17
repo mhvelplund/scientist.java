@@ -19,6 +19,7 @@ import lombok.val;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class Scientist {
 	private static Supplier<Boolean> enabled = Suppliers.ofInstance(true);
+	private static IResultPublisher resultPublisher = new LogPublisher();
 
 	private static <T, TClean> Experiment<T, TClean> build(String name, int concurrentTasks,
 			ExperimentFunction<T> experiment) {
@@ -31,21 +32,35 @@ public class Scientist {
 	 * Conduct a synchronous experiment
 	 * 
 	 * @param <T>
-	 *            The return type of the experiment.
+	 *           The return type of the experiment.
 	 * @param name
-	 *            Name of the experiment
+	 *           Name of the experiment
 	 * @param experiment
-	 *            Experiment callback used to configure the experiment
+	 *           Experiment callback used to configure the experiment
 	 * @return The value of the experiment's control function.
 	 */
 	public static <T> T science(@NonNull String name, @NonNull ExperimentFunction<T> experiment) {
 		val builder = build(name, 1, experiment);
-		builder.clean(Functions.<T>identity());
+		builder.clean(Functions.<T> identity());
 		return builder.build().run();
 	}
 
-	public static synchronized void setEnabled(@NonNull Supplier<Boolean> enabled) {
-		Scientist.enabled = enabled;
+	public static void setEnabled(@NonNull Supplier<Boolean> enabled) {
+		synchronized (enabled) {
+			Scientist.enabled = enabled;
+		}
+	}
+
+	public static IResultPublisher getResultPublisher() {
+		synchronized (resultPublisher) {
+			return resultPublisher;
+		}
+	}
+
+	public static void setResultPublisher(IResultPublisher resultPublisher) {
+		synchronized (resultPublisher) {
+			Scientist.resultPublisher = resultPublisher;
+		}
 	}
 
 }

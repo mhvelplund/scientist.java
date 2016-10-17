@@ -135,17 +135,8 @@ final class ExperimentInstance<T, TClean> {
 		Result<T, TClean> result = new Result<T, TClean>(this, observations, controlObservation, contexts);
 
 		try {
-//          // TODO: Make this Fire and forget so we don't have to wait for this
-//          // to complete before we return a result
-//          await Scientist.ResultPublisher.Publish(result);
-
-			ImmutableList<Observation<T, TClean>> mismatchedObservations = result.getMismatchedObservations();
-			if (!mismatchedObservations.isEmpty()) {
-				for (Observation<T, TClean> observation : mismatchedObservations) {
-					Object r = observation.isThrown() ? observation.getException() : observation.getValue();
-					log.debug("{} ({}ms): {}", observation.getName(), observation.getDuration(), r);
-				}
-			}
+			// TODO: Make this Fire and forget so we don't have to wait for this
+			Scientist.getResultPublisher().publish(result);
 		} catch (Exception e) {
 			thrown.apply(Operation.PUBLISH, e);
 		}
@@ -153,14 +144,14 @@ final class ExperimentInstance<T, TClean> {
 		if (throwOnMismatches && result.isMismatched()) {
 			throw new MismatchException(name, result);
 		}
-		
+
 		if (controlObservation.isThrown()) {
 			throw Throwables.propagate(controlObservation.getException());
 		}
 
 		return controlObservation.getValue();
 	}
-	
+
 	public boolean ignoreMismatchedObservation(Observation<T, TClean> control, Observation<T, TClean> candidate) {
 		if (ignores.isEmpty()) {
 			return false;
