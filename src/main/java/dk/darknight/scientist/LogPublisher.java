@@ -11,9 +11,10 @@ class LogPublisher implements IResultPublisher {
 	public <T, TClean> void publish(Result<T, TClean> result) {
 		ImmutableList<Observation<T, TClean>> mismatchedObservations = result.getMismatchedObservations();
 		if (!mismatchedObservations.isEmpty()) {
+			log.warn("Mismatched observations:");
 			for (Observation<T, TClean> observation : mismatchedObservations) {
 				Object r = observation.isThrown() ? observation.getException() : observation.getValue();
-				log.debug("{} ({}ms): {}", observation.getName(), observation.getDuration(), r);
+				log.warn("   {} ({}ms) returned '{}'", observation.getName(), observation.getDuration(), r);
 			}
 		}
 	}
