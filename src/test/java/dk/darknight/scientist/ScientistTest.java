@@ -28,7 +28,7 @@ public class ScientistTest {
 	@Test(expected=MismatchException.class)
 	public void testScienceMisMatch() {
 		Scientist.setEnabled(enabled);
-		Scientist.science("widget-permissions", new ExperimentFunction<Boolean>() {
+		Scientist.science("testScienceMisMatch", new ExperimentFunction<Boolean>() {
 			public void apply(IExperiment<Boolean> experiment) {
 				experiment.use(new Supplier<Boolean>() {
 					public Boolean get() {
@@ -52,7 +52,7 @@ public class ScientistTest {
 	@Test
 	public void testScienceMatch() {
 		Scientist.setEnabled(enabled);
-		boolean isCollaborator = Scientist.science("widget-permissions", new ExperimentFunction<Boolean>() {
+		boolean isCollaborator = Scientist.science("testScienceMatch", new ExperimentFunction<Boolean>() {
 			public void apply(IExperiment<Boolean> experiment) {
 				experiment.compare(new Comparator<Boolean>() {
 					public int compare(Boolean o1, Boolean o2) {
@@ -82,7 +82,7 @@ public class ScientistTest {
 	@Test
 	public void testScienceNotEnabled() {
 		Scientist.setEnabled(Suppliers.ofInstance(false));
-		Scientist.science("widget-permissions", new ExperimentFunction<Boolean>() {
+		Scientist.science("testScienceNotEnabled", new ExperimentFunction<Boolean>() {
 			public void apply(IExperiment<Boolean> experiment) {
 				experiment.use(new Supplier<Boolean>() {
 					public Boolean get() {
@@ -97,6 +97,27 @@ public class ScientistTest {
 				});
 				
 				experiment.setThrowOnMismatches(true);
+			}
+		});
+	}
+
+	@Test
+	public void testScienceCandidatesThrowsException() {
+		Scientist.science("testScienceCandidatesThrowsException", new ExperimentFunction<Boolean>() {
+			public void apply(IExperiment<Boolean> experiment) {
+				experiment.use(new Supplier<Boolean>() {
+					public Boolean get() {
+						return true;
+					}
+				});
+
+				experiment.attempt(new Supplier<Boolean>() {
+					public Boolean get() {
+						throw new NullPointerException("Oops");
+					}
+				});
+				
+				experiment.setThrowOnMismatches(false);
 			}
 		});
 	}
