@@ -129,7 +129,7 @@ final class ExperimentInstance<T, TClean> {
 		Observation<T, TClean> controlObservation = null;
 		for (NamedBehavior<T> b : behaviors) {
 			@SuppressWarnings("unchecked")
-			Observation<T, TClean> o = (Observation<T, TClean>) Observation.of(b.getName(), b.getBehavior(), comparator, thrown, cleaner);
+			Observation<T, TClean> o = (Observation<T, TClean>) Observation.of(b.getName(), b.getBehavior(), thrown, cleaner);
 			observations.add(o);
 			if (CONTROL_EXPERIMENT_NAME.equals(o.getName()))
 				controlObservation = o;
