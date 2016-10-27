@@ -49,7 +49,7 @@ class Experiment<T, TClean> implements IExperiment<T> {
 	private final String name;
 	private Supplier<Boolean> runIf = ALWAYS_RUN;
 	private DoubleAction<Operation, Exception> thrown = ALWAYS_THROW;
-	private boolean throwOnMismatches;
+	private boolean throwOnMismatches = false;
 
 	public Experiment(@NonNull String name, @NonNull Supplier<Boolean> enabled, int concurrentTasks) {
 		Preconditions.checkArgument(concurrentTasks > 0, "concurrentTasks must be greater than 0");

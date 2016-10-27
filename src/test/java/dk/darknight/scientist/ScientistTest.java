@@ -16,8 +16,7 @@ public class ScientistTest {
 	private final String user = "jdoe";
 	private Supplier<Boolean> enabled = Suppliers.ofInstance(true);
 
-	boolean isNotCollaborator(String name) {
-		
+	boolean isNotCollaborator(String name) {		
 		return user.equals(name);
 	}
 
@@ -28,7 +27,7 @@ public class ScientistTest {
 	@Test(expected=MismatchException.class)
 	public void testScienceMisMatch() {
 		Scientist.setEnabled(enabled);
-		Scientist.science("testScienceMisMatch", new ExperimentFunction<Boolean>() {
+		Scientist.science("testScienceMisMatch", 2, new ExperimentFunction<Boolean>() {
 			public void apply(IExperiment<Boolean> experiment) {
 				experiment.use(new Supplier<Boolean>() {
 					public Boolean get() {
@@ -52,7 +51,7 @@ public class ScientistTest {
 	@Test
 	public void testScienceMatch() {
 		Scientist.setEnabled(enabled);
-		boolean isCollaborator = Scientist.science("testScienceMatch", new ExperimentFunction<Boolean>() {
+		boolean isCollaborator = Scientist.science("testScienceMatch", 2, new ExperimentFunction<Boolean>() {
 			public void apply(IExperiment<Boolean> experiment) {
 				experiment.compare(new Comparator<Boolean>() {
 					public int compare(Boolean o1, Boolean o2) {
@@ -70,9 +69,7 @@ public class ScientistTest {
 					public Boolean get() {
 						return isHasAccess(user);
 					}
-				});
-				
-				experiment.setThrowOnMismatches(true);
+				});				
 			}
 		});
 
@@ -82,7 +79,7 @@ public class ScientistTest {
 	@Test
 	public void testScienceNotEnabled() {
 		Scientist.setEnabled(Suppliers.ofInstance(false));
-		Scientist.science("testScienceNotEnabled", new ExperimentFunction<Boolean>() {
+		Scientist.science("testScienceNotEnabled", 2, new ExperimentFunction<Boolean>() {
 			public void apply(IExperiment<Boolean> experiment) {
 				experiment.use(new Supplier<Boolean>() {
 					public Boolean get() {
@@ -95,15 +92,13 @@ public class ScientistTest {
 						return isHasAccess(user);
 					}
 				});
-				
-				experiment.setThrowOnMismatches(true);
 			}
 		});
 	}
 
 	@Test
 	public void testScienceCandidatesThrowsException() {
-		Scientist.science("testScienceCandidatesThrowsException", new ExperimentFunction<Boolean>() {
+		Scientist.science("testScienceCandidatesThrowsException", 2, new ExperimentFunction<Boolean>() {
 			public void apply(IExperiment<Boolean> experiment) {
 				experiment.use(new Supplier<Boolean>() {
 					public Boolean get() {
@@ -116,8 +111,6 @@ public class ScientistTest {
 						throw new NullPointerException("Oops");
 					}
 				});
-				
-				experiment.setThrowOnMismatches(false);
 			}
 		});
 	}

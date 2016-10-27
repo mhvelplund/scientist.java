@@ -45,6 +45,12 @@ public class Scientist {
 		return builder.build().run();
 	}
 
+	public static <T> T science(@NonNull String name, int concurrentTasks, @NonNull ExperimentFunction<T> experiment) {
+		val builder = build(name, concurrentTasks, experiment);
+		builder.clean(Functions.<T> identity());
+		return builder.build().runParallel();
+	}
+
 	public static void setEnabled(@NonNull Supplier<Boolean> enabled) {
 		synchronized (enabled) {
 			Scientist.enabled = enabled;

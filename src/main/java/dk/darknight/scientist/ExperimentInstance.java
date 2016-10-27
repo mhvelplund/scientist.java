@@ -1,13 +1,8 @@
 package dk.darknight.scientist;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
+import java.util.concurrent.*;
 
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
@@ -32,6 +27,8 @@ final class ExperimentInstance<T, TClean> {
 	}
 
 	private final static String CONTROL_EXPERIMENT_NAME = "control";
+
+	private static final long CANDIDATE_TIMEOUT_MS = 5000;
 
 	private final Action<Void> beforeRun;
 	private final Map<String, Supplier<T>> candidates;
@@ -91,37 +88,18 @@ final class ExperimentInstance<T, TClean> {
 	}
 
 	public T run() {
-        // Determine if experiments should be run.
+		// Determine if experiments should be run.
 		if (!shouldExperimentRun()) {
 			return behaviors.get(0).getBehavior().get();
 		}
-		
+
 		if (beforeRun != null) {
 			beforeRun.apply(null);
 		}
 
-        // Randomize ordering...
-		// TODO: wrap in synchronized ?
+		// Randomize ordering...
 		Collections.shuffle(behaviors);
-		
-//        // Break tasks into batches of "ConcurrentTasks" size
-//        var observations = new List<Observation<T, TClean>>();
-//        foreach (var behaviors in orderedBehaviors.Chunk(ConcurrentTasks))
-//        {
-//            // Run batch of behaviors simultaneously
-//            var tasks = behaviors.Select(b =>
-//            {
-//                return Observation<T, TClean>.New(
-//                    b.Name,
-//                    b.Behavior,
-//                    Comparator,
-//                    Thrown,
-//                    Cleaner);
-//            });
-//
-//            // Collect the observations
-//            observations.AddRange(await Task.WhenAll(tasks));
-//        }         
+
 		List<Observation<T, TClean>> observations = new ArrayList<>();
 
 		// ... don't break tasks into batches of "ConcurrentTasks" size ... just
@@ -129,16 +107,16 @@ final class ExperimentInstance<T, TClean> {
 		Observation<T, TClean> controlObservation = null;
 		for (NamedBehavior<T> b : behaviors) {
 			@SuppressWarnings("unchecked")
-			Observation<T, TClean> o = (Observation<T, TClean>) Observation.of(b.getName(), b.getBehavior(), thrown, cleaner);
+			Observation<T, TClean> o = (Observation<T, TClean>) Observation.of(b.getName(), b.getBehavior(), thrown,
+					cleaner);
 			observations.add(o);
 			if (CONTROL_EXPERIMENT_NAME.equals(o.getName()))
 				controlObservation = o;
 		}
-		
+
 		Result<T, TClean> result = new Result<T, TClean>(this, observations, controlObservation, contexts);
 
 		try {
-			// TODO: Make this Fire and forget so we don't have to wait for this
 			Scientist.getResultPublisher().publish(result);
 		} catch (Exception e) {
 			thrown.apply(Operation.PUBLISH, e);
@@ -153,6 +131,109 @@ final class ExperimentInstance<T, TClean> {
 		}
 
 		return controlObservation.getValue();
+	}
+
+	public T runParallel() {
+		// Determine if experiments should be run.
+		if (!shouldExperimentRun()) {
+			return behaviors.get(0).getBehavior().get();
+		}
+
+		if (beforeRun != null) {
+			beforeRun.apply(null);
+		}
+
+		// Randomize ordering...
+		Collections.shuffle(behaviors);
+
+		// Break tasks into batches of "ConcurrentTasks" size
+		final List<Future<Observation<T, TClean>>> observations = new ArrayList<>();
+		final List<String> observationNames = new ArrayList<>();
+		Future<Observation<T, TClean>> controlFuture = null;
+		final ExecutorService xs = Executors.newWorkStealingPool(concurrentTasks);
+
+		for (NamedBehavior<T> b : behaviors) {
+			@SuppressWarnings("unchecked")
+			Future<Observation<T, TClean>> o2 = (Future<Observation<T, TClean>>) ((Future<?>) Observation.of(xs,
+					b.getName(), b.getBehavior(), thrown, cleaner));
+			observations.add(o2);
+			observationNames.add(b.getName());
+
+			if (CONTROL_EXPERIMENT_NAME.equals(b.getName())) {
+				controlFuture = o2;
+			}
+		}
+
+		xs.shutdown();
+
+		final Observation<T, TClean> controlObservation;
+		try {
+			controlObservation = controlFuture.get();
+		} catch (InterruptedException | ExecutionException e) {
+			throw Throwables.propagate(e);
+		}
+
+		final ExperimentInstance<T, TClean> instance = this;
+
+		// Publish the results asynchronously
+		Future<Result<T, TClean>> result = Executors.newSingleThreadScheduledExecutor()
+				.submit(new Callable<Result<T, TClean>>() {
+					@Override
+					public Result<T, TClean> call() throws Exception {
+						Result<T, TClean> result = null;
+						try {
+							List<Observation<T, TClean>> os = resolveObservationFutures(observations, observationNames,
+									xs);
+							result = new Result<T, TClean>(instance, os, controlObservation, contexts);
+							try {
+								Scientist.getResultPublisher().publish(result);
+							} catch (Exception e) {
+								thrown.apply(Operation.PUBLISH, e);
+							}
+						} catch (InterruptedException | ExecutionException e) {
+							thrown.apply(Operation.PUBLISH, e);
+						}
+						return result;
+					}
+				});
+
+		if (throwOnMismatches) {
+			Result<T, TClean> r;
+			try {
+				r = result.get();
+			} catch (InterruptedException | ExecutionException e) {
+				throw Throwables.propagate(e);
+			}
+			if (r.isMismatched()) {
+				throw new MismatchException(name, r);
+			}
+		}
+
+		if (controlObservation.isThrown()) {
+			throw Throwables.propagate(controlObservation.getException());
+		}
+
+		return controlObservation.getValue();
+	}
+
+	private List<Observation<T, TClean>> resolveObservationFutures(
+			final List<Future<Observation<T, TClean>>> observations, final List<String> observationNames,
+			final ExecutorService xs) throws InterruptedException, ExecutionException {
+		if (xs.awaitTermination(CANDIDATE_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+			xs.shutdownNow();
+		}
+		List<Observation<T, TClean>> os = new ArrayList<>();
+		for (int i = 0; i < observations.size(); i++) {
+			Future<Observation<T, TClean>> f = observations.get(i);
+			Observation<T, TClean> o;
+			if (f.isDone()) {
+				o = f.get();
+			} else {
+				o = Observation.timedOut(observationNames.get(i));
+			}
+			os.add(o);
+		}
+		return os;
 	}
 
 	public boolean ignoreMismatchedObservation(Observation<T, TClean> control, Observation<T, TClean> candidate) {

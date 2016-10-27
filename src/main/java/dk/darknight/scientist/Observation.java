@@ -4,6 +4,7 @@ import java.util.Comparator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
 
 import com.google.common.base.Function;
 import com.google.common.base.MoreObjects;
@@ -36,6 +37,12 @@ class Observation<T, TClean> {
 			DoubleAction<Operation, Exception> thrown, Function<T, TClean> cleaner) {
 		Observation<T, TClean> observation = new Observation<T, TClean>(name, thrown, cleaner);
 		observation.run(block);
+		return observation;
+	}
+	
+	public static <T, TClean> Observation<T, TClean> timedOut(String name) {
+		Observation<T, TClean> observation = new Observation<T, TClean>(name, null, null);
+		observation.exception = new TimeoutException("Experiment failed to complete in time");
 		return observation;
 	}
 

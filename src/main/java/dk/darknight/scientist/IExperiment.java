@@ -88,6 +88,10 @@ public interface IExperiment<T> {
 	 * This is intended for test environments and should not be enabled in a
 	 * production environment.
 	 * </p>
+	 * <p>
+	 * <em>Note that this forces synchronous reporting, meaning that the
+	 * experiment will block until all observations are complete.</em>
+	 * </p>
 	 * 
 	 * @param throwOnMismatches
 	 *            Whether to throw when the control and candidate mismatch.
