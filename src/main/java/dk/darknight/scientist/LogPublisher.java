@@ -19,7 +19,7 @@ class LogPublisher implements IResultPublisher {
 		
 		for (int i = 0; i < observations.size(); i++) {
 			Observation<T, TClean> o = observations.get(i);
-			durations[i] = o.getName() + ":" + o.getDuration() + "ms";
+			durations[i] = o.getName() + ": " + o.getDuration() + "ms";
 		}
 
 		log.info(experimentId + ": " + Joiner.on(", ").join(durations));
@@ -28,9 +28,9 @@ class LogPublisher implements IResultPublisher {
 			final Observation<T, TClean> control = result.getControl();
 			String expectedValue;
 			if (control.isThrown()) {
-				expectedValue = "thrown " + exceptionToString(control.getException());
+				expectedValue = "thrown exception " + exceptionToString(control.getException());
 			} else {
-				expectedValue = "returned '" + control.getValue() + "'";
+				expectedValue = " '" + control.getCleanedValue() + "'";
 			}
 
 			for (Observation<T, TClean> observation : mismatchedObservations) {
@@ -45,7 +45,7 @@ class LogPublisher implements IResultPublisher {
 					sb.append(exceptionToString(e));
 				} else {
 					sb.append("returned '");
-					sb.append(observation.getValue());
+					sb.append(observation.getCleanedValue());
 					sb.append("'");
 				}
 				sb.append("; expected " + expectedValue);

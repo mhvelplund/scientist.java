@@ -8,6 +8,6 @@ import dk.darknight.scientist.IExperiment;
  * @param <T>
  *            the return type for the experiment.
  */
-public interface ExperimentFunction<T> {
-	 public void apply(IExperiment<T> input);
+public interface ExperimentFunction<T, TClean> {
+	 public void apply(IExperiment<T, TClean> input);
 }

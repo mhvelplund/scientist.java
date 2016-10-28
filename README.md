@@ -76,3 +76,9 @@ Java 8 example:
 See the original [.NET documentation](https://github.com/github/Scientist.net) 
 for a full description of how to setup experiments (the API in Java is the same).
 
+## Lombok
+
+This project uses [Project Lombok](https://projectlombok.org/) for boilerplate code. 
+It will compile fine with Maven, but if you want to edit the sources in an IDE, you 
+will need the [Project Lombok plugin](https://projectlombok.org/download.html).
+

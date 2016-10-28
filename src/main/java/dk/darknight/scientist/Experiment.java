@@ -10,12 +10,10 @@ import dk.darknight.scientist.functions.DoubleAction;
 import dk.darknight.scientist.functions.DoubleFunction;
 import lombok.NonNull;
 
-class Experiment<T, TClean> implements IExperiment<T> {
+class Experiment<T, TClean> implements IExperiment<T, TClean> {
 	private final class DefaultComparator implements Comparator<T> {
 		private static final int EQUAL = 0;
-		private static final int NOT_EQUAL = -1; // False is always -1,
-													// regardless of actual
-													// result
+		private static final int NOT_EQUAL = -1; // False is always -1, regardless of actual result
 
 		@Override
 		public int compare(T o1, T o2) {
@@ -93,7 +91,7 @@ class Experiment<T, TClean> implements IExperiment<T> {
 	}
 
 	@Override
-	public void clean(@NonNull Function<T, ?> cleaner) {
+	public void clean(@NonNull Function<T, TClean> cleaner) {
 		this.cleaner = cleaner;
 	}
 
