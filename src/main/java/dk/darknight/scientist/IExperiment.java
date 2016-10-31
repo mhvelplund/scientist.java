@@ -20,7 +20,7 @@ import dk.darknight.scientist.functions.DoubleFunction;
  * @param <T>
  *            The return result for the experiment.
  */
-public interface IExperiment<T> {
+public interface IExperiment<T, TClean> {
 	/**
 	 * Defines data to publish with results.
 	 * 
@@ -122,5 +122,5 @@ public interface IExperiment<T> {
 	 * @param cleaner
 	 *            a method that provides a clean value to publish.
 	 */
-	void clean(Function<T, ?> cleaner);
+	void clean(Function<T, TClean> cleaner);
 }

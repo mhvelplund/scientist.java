@@ -16,13 +16,25 @@ import lombok.Getter;
 import lombok.ToString;
 import lombok.Value;
 
+/**
+ * An instance of an experiment. This actually runs the control and the
+ * candidate and measures the result.
+ *
+ * @param <T>
+ *           The return type of the experiment
+ * @param <TClean>
+ *           The cleaned type of the experiment
+ */
 @Getter
 @ToString
 @EqualsAndHashCode
 final class ExperimentInstance<T, TClean> {
 	@Value
 	private static class NamedBehavior<T> {
+		/** Gets the behavior to execute during an experiment. */
 		String name;
+		
+		/** Gets the name of the behavior. */
 		Supplier<T> behavior;
 	}
 
@@ -66,7 +78,8 @@ final class ExperimentInstance<T, TClean> {
 		}
 	}
 
-	boolean shouldExperimentRun() {
+	/** Determine whether or not the experiment should run. */
+	private boolean shouldExperimentRun() {
 		try {
 			// Only let the experiment run if at least one candidate (> 1
 			// behaviors) is included. The control is always included behaviors
@@ -78,6 +91,8 @@ final class ExperimentInstance<T, TClean> {
 		}
 	}
 
+	
+	/** Does {@link #runIf} allow the experiment to run? */
 	private boolean runIfAllows() {
 		try {
 			return runIf.get();
@@ -102,8 +117,7 @@ final class ExperimentInstance<T, TClean> {
 
 		List<Observation<T, TClean>> observations = new ArrayList<>();
 
-		// ... don't break tasks into batches of "ConcurrentTasks" size ... just
-		// run then in sequence :)
+		// ... don't break tasks into batches of "ConcurrentTasks" size ... just run then in sequence :)
 		Observation<T, TClean> controlObservation = null;
 		for (NamedBehavior<T> b : behaviors) {
 			@SuppressWarnings("unchecked")
@@ -173,29 +187,7 @@ final class ExperimentInstance<T, TClean> {
 			throw Throwables.propagate(e);
 		}
 
-		final ExperimentInstance<T, TClean> instance = this;
-
-		// Publish the results asynchronously
-		Future<Result<T, TClean>> result = Executors.newSingleThreadScheduledExecutor()
-				.submit(new Callable<Result<T, TClean>>() {
-					@Override
-					public Result<T, TClean> call() throws Exception {
-						Result<T, TClean> result = null;
-						try {
-							List<Observation<T, TClean>> os = resolveObservationFutures(observations, observationNames,
-									xs);
-							result = new Result<T, TClean>(instance, os, controlObservation, contexts);
-							try {
-								Scientist.getResultPublisher().publish(result);
-							} catch (Exception e) {
-								thrown.apply(Operation.PUBLISH, e);
-							}
-						} catch (InterruptedException | ExecutionException e) {
-							thrown.apply(Operation.PUBLISH, e);
-						}
-						return result;
-					}
-				});
+		Future<Result<T, TClean>> result = publishAsynchronously(observations, observationNames, xs, controlObservation, this);
 
 		if (throwOnMismatches) {
 			Result<T, TClean> r;
@@ -214,6 +206,41 @@ final class ExperimentInstance<T, TClean> {
 		}
 
 		return controlObservation.getValue();
+	}
+
+	/**
+	 * Publish the results asynchronously.
+	 * 
+	 * @param observations
+	 * @param observationNames
+	 * @param xs
+	 * @param controlObservation
+	 * @param instance
+	 * @return
+	 */
+	private Future<Result<T, TClean>> publishAsynchronously(final List<Future<Observation<T, TClean>>> observations,
+			final List<String> observationNames, final ExecutorService xs, final Observation<T, TClean> controlObservation,
+			final ExperimentInstance<T, TClean> instance) {
+		Future<Result<T, TClean>> result = Executors.newSingleThreadScheduledExecutor()
+				.submit(new Callable<Result<T, TClean>>() {
+					@Override
+					public Result<T, TClean> call() throws Exception {
+						Result<T, TClean> result = null;
+						try {
+							List<Observation<T, TClean>> os = resolveObservationFutures(observations, observationNames, xs);
+							result = new Result<T, TClean>(instance, os, controlObservation, contexts);
+							try {
+								Scientist.getResultPublisher().publish(result);
+							} catch (Exception e) {
+								thrown.apply(Operation.PUBLISH, e);
+							}
+						} catch (InterruptedException | ExecutionException e) {
+							thrown.apply(Operation.PUBLISH, e);
+						}
+						return result;
+					}
+				});
+		return result;
 	}
 
 	private List<Observation<T, TClean>> resolveObservationFutures(

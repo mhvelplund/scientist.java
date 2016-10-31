@@ -12,6 +12,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Declares all of the settings necessary in order to create a new
+ * {@link ExperimentInstance}.
+ *
+ * @param <T>
+ *           The result type for the experiment.
+ * @param <TClean>
+ *           The cleaned type of the experiment.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -2,13 +2,25 @@ package dk.darknight.scientist;
 
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.NonNull;
 
-@Slf4j
-class LogPublisher implements IResultPublisher {
+public class LogPublisher implements IResultPublisher {
+	public static final LogPublisher DEFAULT = new LogPublisher(); 
+	private final Logger log;
+	
+	private LogPublisher() {
+		log = LoggerFactory.getLogger(LogPublisher.class);
+	}
+		
+	public LogPublisher(@NonNull Logger log) {
+		this.log = log;
+	}
 
 	@Override
 	public <T, TClean> void publish(Result<T, TClean> result) {
@@ -19,7 +31,7 @@ class LogPublisher implements IResultPublisher {
 		
 		for (int i = 0; i < observations.size(); i++) {
 			Observation<T, TClean> o = observations.get(i);
-			durations[i] = o.getName() + ":" + o.getDuration() + "ms";
+			durations[i] = o.getName() + ": " + o.getDuration() + "ms";
 		}
 
 		log.info(experimentId + ": " + Joiner.on(", ").join(durations));
@@ -28,9 +40,9 @@ class LogPublisher implements IResultPublisher {
 			final Observation<T, TClean> control = result.getControl();
 			String expectedValue;
 			if (control.isThrown()) {
-				expectedValue = "thrown " + exceptionToString(control.getException());
+				expectedValue = "thrown exception " + exceptionToString(control.getException());
 			} else {
-				expectedValue = "returned '" + control.getValue() + "'";
+				expectedValue = " '" + control.getCleanedValue() + "'";
 			}
 
 			for (Observation<T, TClean> observation : mismatchedObservations) {
@@ -45,7 +57,7 @@ class LogPublisher implements IResultPublisher {
 					sb.append(exceptionToString(e));
 				} else {
 					sb.append("returned '");
-					sb.append(observation.getValue());
+					sb.append(observation.getCleanedValue());
 					sb.append("'");
 				}
 				sb.append("; expected " + expectedValue);
