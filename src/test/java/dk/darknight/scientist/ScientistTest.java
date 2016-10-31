@@ -1,11 +1,14 @@
 package dk.darknight.scientist;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.verify;
 
 import org.junit.Before;
@@ -15,10 +18,10 @@ import org.slf4j.Logger;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 
 import dk.darknight.scientist.functions.Action;
 import dk.darknight.scientist.functions.DoubleAction;
+import dk.darknight.scientist.functions.DoubleFunction;
 import dk.darknight.scientist.functions.ExperimentFunction;
 import dk.darknight.scientist.util.FractionSummer;
 
@@ -36,27 +39,23 @@ public class ScientistTest {
 
 		@Override
 		public void apply(IExperiment<Float, Float> experiment) {
-			experiment.use(new Supplier<Float>() {
-				@Override
-				public Float get() {
-					return fractionSummer.getFloatSum();
-				}
-			});
-
-			experiment.attempt("intSummer", new Supplier<Float>() {
-				@Override
-				public Float get() {
-					return (float) fractionSummer.getIntSum();
-				}
-			});
+			experiment.use(floatSumSupplier(fractionSummer));
+			experiment.attempt("intSummer", intSumSupplier(fractionSummer));
 		}
 	}
 
 	private static final int INTEGER_FRACTION_SUM = 7;
 
-	/**
-	 * Return a {@link FractionSummer} that will only work with float summing.
-	 */
+	private Supplier<Float> floatSumSupplier(final FractionSummer fractionSummer) {
+		return new Supplier<Float>() {
+			@Override
+			public Float get() {
+				return fractionSummer.getFloatSum();
+			}
+		};
+	}
+
+	/** Return a {@link FractionSummer} that will only work with float summing. */
 	private FractionSummer getFloatFractionSum() {
 		int[] numerators = { 1, 1, 1 };
 		int[] denominators = { 3, 3, 3 };
@@ -76,6 +75,15 @@ public class ScientistTest {
 		return new FractionSummer(numerators, denominators);
 	}
 
+	private Supplier<Float> intSumSupplier(final FractionSummer fractionSummer) {
+		return new Supplier<Float>() {
+			@Override
+			public Float get() {
+				return (float) fractionSummer.getIntSum();
+			}
+		};
+	}
+
 	@Before
 	public void setup() {
 		Scientist.setResultPublisher(LogPublisher.DEFAULT);
@@ -83,55 +91,65 @@ public class ScientistTest {
 	}
 
 	@Test
-	public void testHandledExceptionInRunIf() {
+	public void testBeforeRun() {
+		@SuppressWarnings("unchecked")
+		final Action<Void> beforeRun = mock(Action.class);
 		final FractionSummer fractionSummer = getIntegerFractionSum();
 
-		Scientist.science("handled runIf-exception experiment", new ExperimentFunction<Float, Float>() {
+		Scientist.science("beforeRun experiment", new ExperimentFunction<Float, Float>() {
 			@Override
 			public void apply(IExperiment<Float, Float> experiment) {
-				experiment.use(new Supplier<Float>() {
-					@Override
-					public Float get() {
-						return fractionSummer.getFloatSum();
-					}
-				});
-
-				experiment.attempt("intSummer", new Supplier<Float>() {
-					@Override
-					public Float get() {
-						return (float) fractionSummer.getIntSum();
-					}
-				});
-
-				experiment.runIf(throwsUnsupportedOperationExceptions());
-
-				experiment.thrown(getExceptionHandler(Operation.RUN_IF));
+				experiment.use(floatSumSupplier(fractionSummer));
+				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
+				experiment.beforeRun(beforeRun);
 			}
+		});
 
+		verify(beforeRun).apply(any(Void.class));
+	}
+
+	@Test(expected = UnsupportedOperationException.class)
+	public void testBeforeRunException() {
+		final Action<Void> beforeRun = new Action<Void>() {
+			@Override
+			public Void apply(Void input) {
+				throw new UnsupportedOperationException();
+			}
+		};
+
+		final FractionSummer fractionSummer = getIntegerFractionSum();
+
+		Scientist.science("beforeRun experiment", new ExperimentFunction<Float, Float>() {
+			@Override
+			public void apply(IExperiment<Float, Float> experiment) {
+				experiment.use(floatSumSupplier(fractionSummer));
+				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
+				experiment.beforeRun(beforeRun);
+			}
 		});
 	}
 
-	/**
-	 * Return an exception handler for {@link UnsupportedOperationException}s.
-	 * 
-	 * @param operation
-	 *           if the operation was this, then the exception is ignored,
-	 *           otherwise it's propagated.
-	 * @return an exception handler
-	 */
-	private DoubleAction<Operation, Exception> getExceptionHandler(final Operation operation) {
-		return new DoubleAction<Operation, Exception>() {
-			@Override
-			public Void apply(Operation first, Exception second) {
-				if (second instanceof UnsupportedOperationException && first.equals(operation)) {
-					// OK - handled
-				} else {
-					throw Throwables.propagate(second);
-				}
+	@Test
+	public void testHandledExceptionInEnabledCheck() {
+		// Setup
+		@SuppressWarnings("unchecked")
+		final DoubleAction<Operation, Exception> exceptionHandler = mock(DoubleAction.class);
 
-				return null;
+		// Execute
+		final FractionSummer fractionSummer = getIntegerFractionSum();
+
+		Scientist.setEnabled(throwsUnsupportedOperationExceptions());
+		Scientist.science("enabled-exception experiment", new ExperimentFunction<Float, Float>() {
+			@Override
+			public void apply(IExperiment<Float, Float> experiment) {
+				experiment.use(floatSumSupplier(fractionSummer));
+				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
+				experiment.thrown(exceptionHandler);
 			}
-		};
+		});
+		
+		// Verify
+		verify(exceptionHandler).apply(eq(Operation.ENABLED), any(UnsupportedOperationException.class));
 	}
 
 	@Test
@@ -159,106 +177,57 @@ public class ScientistTest {
 	public void testSetEnabled() {
 		FractionSummer fractionSummer = spy(getIntegerFractionSum());
 		Scientist.setEnabled(Suppliers.ofInstance(false));
-		float sum = Scientist.science("singlethreaded experiment", new CompareFloatAndIntSummedFractions(fractionSummer));
+		float sum = Scientist.science("enabled experiment", new CompareFloatAndIntSummedFractions(fractionSummer));
 		assertEquals(INTEGER_FRACTION_SUM, sum, 0);
 		verify(fractionSummer, never()).getIntSum();
 	}
 
 	@Test
 	public void testSetResultPublisher() {
+		//Setup
 		Logger mockLog = mock(Logger.class);
+		
+		// Execute
 		LogPublisher logPublisher = new LogPublisher(mockLog);
 		Scientist.setResultPublisher(logPublisher);
-		FractionSummer fractionSummer = getIntegerFractionSum();
-		Scientist.science("singlethreaded experiment", new CompareFloatAndIntSummedFractions(fractionSummer));
+		final FractionSummer fractionSummer = getIntegerFractionSum();
+		Scientist.science("set publisher experiment", new ExperimentFunction<Float, Float>() {
+			@Override
+			public void apply(IExperiment<Float, Float> experiment) {
+				experiment.use(floatSumSupplier(fractionSummer));
+				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
+				// Forces the publication to be complete before returning
+				experiment.setThrowOnMismatches(true);
+			}
+		});
+		
+		// Verify
 		verify(mockLog).info(anyString());
 	}
 
-	@Test(expected = UnsupportedOperationException.class)
+	@Test
 	public void testUnhandledExceptionInRunIf() {
+		// Setup
+		@SuppressWarnings("unchecked")
+		final DoubleAction<Operation, Exception> exceptionHandler = mock(DoubleAction.class);
+
+		// Execute
 		final FractionSummer fractionSummer = getIntegerFractionSum();
 
 		Scientist.science("unhandled runIf-exception experiment", new ExperimentFunction<Float, Float>() {
 			@Override
 			public void apply(IExperiment<Float, Float> experiment) {
-				experiment.use(new Supplier<Float>() {
-					@Override
-					public Float get() {
-						return fractionSummer.getFloatSum();
-					}
-				});
-
-				experiment.attempt("intSummer", new Supplier<Float>() {
-					@Override
-					public Float get() {
-						return (float) fractionSummer.getIntSum();
-					}
-				});
-
+				experiment.use(floatSumSupplier(fractionSummer));
+				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
 				experiment.runIf(throwsUnsupportedOperationExceptions());
 
 				// This won't handle the exception since the Operation doesn't match
-				experiment.thrown(getExceptionHandler(Operation.PUBLISH));
+				experiment.thrown(exceptionHandler);
 			}
-
 		});
-	}
-
-	@Test
-	public void testHandledExceptionInEnabledCheck() {
-		final FractionSummer fractionSummer = getIntegerFractionSum();
-
-		Scientist.setEnabled(throwsUnsupportedOperationExceptions());
-		Scientist.science("handled enabled-exception experiment", new ExperimentFunction<Float, Float>() {
-			@Override
-			public void apply(IExperiment<Float, Float> experiment) {
-				experiment.use(new Supplier<Float>() {
-					@Override
-					public Float get() {
-						return fractionSummer.getFloatSum();
-					}
-				});
-
-				experiment.attempt("intSummer", new Supplier<Float>() {
-					@Override
-					public Float get() {
-						return (float) fractionSummer.getIntSum();
-					}
-				});
-
-				experiment.thrown(getExceptionHandler(Operation.ENABLED));
-			}
-
-		});
-	}
-
-	@Test(expected = UnsupportedOperationException.class)
-	public void testUnandledExceptionInEnabledCheck() {
-		final FractionSummer fractionSummer = getIntegerFractionSum();
-
-		Scientist.setEnabled(throwsUnsupportedOperationExceptions());
-		Scientist.science("unhandled enabled-exception experiment", new ExperimentFunction<Float, Float>() {
-			@Override
-			public void apply(IExperiment<Float, Float> experiment) {
-				experiment.use(new Supplier<Float>() {
-					@Override
-					public Float get() {
-						return fractionSummer.getFloatSum();
-					}
-				});
-
-				experiment.attempt("intSummer", new Supplier<Float>() {
-					@Override
-					public Float get() {
-						return (float) fractionSummer.getIntSum();
-					}
-				});
-
-				// This won't handle the exception since the Operation doesn't match
-				experiment.thrown(getExceptionHandler(Operation.IGNORE));
-			}
-
-		});
+		
+		// Verify
+		verify(exceptionHandler).apply(eq(Operation.RUN_IF), any(UnsupportedOperationException.class));
 	}
 
 	/** Utility {@link Supplier} that always throws an exception. */
@@ -272,89 +241,82 @@ public class ScientistTest {
 	}
 
 	@Test
-	public void testBeforeRun() {
-		@SuppressWarnings("unchecked")
-		final Action<Void> beforeRun = mock(Action.class);
-		final FractionSummer fractionSummer = getIntegerFractionSum();
-
-		Scientist.science("beforeRun experiment", new ExperimentFunction<Float, Float>() {
-			@Override
-			public void apply(IExperiment<Float, Float> experiment) {
-				experiment.use(new Supplier<Float>() {
-					@Override
-					public Float get() {
-						return fractionSummer.getFloatSum();
-					}
-				});
-
-				experiment.attempt("intSummer", new Supplier<Float>() {
-					@Override
-					public Float get() {
-						return (float) fractionSummer.getIntSum();
-					}
-				});
-
-				experiment.beforeRun(beforeRun);
-			}
-		});
-
-		verify(beforeRun).apply(any(Void.class));
-	}
-
-	@Test(expected = UnsupportedOperationException.class)
-	public void testBeforeRunException() {
-		final Action<Void> beforeRun = new Action<Void>() {
-			@Override
-			public Void apply(Void input) {
-				throw new UnsupportedOperationException();
-			}
-		};
-
-		final FractionSummer fractionSummer = getIntegerFractionSum();
-
-		Scientist.science("beforeRun experiment", new ExperimentFunction<Float, Float>() {
-			@Override
-			public void apply(IExperiment<Float, Float> experiment) {
-				experiment.use(new Supplier<Float>() {
-					@Override
-					public Float get() {
-						return fractionSummer.getFloatSum();
-					}
-				});
-
-				experiment.attempt("intSummer", new Supplier<Float>() {
-					@Override
-					public Float get() {
-						return (float) fractionSummer.getIntSum();
-					}
-				});
-
-				experiment.beforeRun(beforeRun);
-			}
-		});
-	}
-
-	@Test
-	@Ignore
+	@SuppressWarnings("unchecked")
 	public void testPublicationException() {
-		fail();
+		// Setup
+		final DoubleAction<Operation, Exception> exceptionHandler = mock(DoubleAction.class);
+
+		LogPublisher logPublisher = mock(LogPublisher.class);
+		doThrow(new UnsupportedOperationException()).when(logPublisher).publish(any(Result.class));
+		
+		// Execute
+		Scientist.setResultPublisher(logPublisher);
+		final FractionSummer fractionSummer = getIntegerFractionSum();
+		Scientist.science("publishing fails experiment", new ExperimentFunction<Float, Float>() {
+			@Override
+			public void apply(IExperiment<Float, Float> experiment) {
+				experiment.use(floatSumSupplier(fractionSummer));
+				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
+				// Forces the publication to be complete before returning
+				experiment.setThrowOnMismatches(true);
+				experiment.thrown(exceptionHandler);
+			}
+		});
+		
+		// Verify
+		verify(exceptionHandler).apply(eq(Operation.PUBLISH), any(UnsupportedOperationException.class));
 	}
 
 	@Test
-	@Ignore
 	public void testMismatchedExperimentsWithoutThrownException() {
-		fail();
+		final FractionSummer fractionSummer = getFloatFractionSum();
+		
+		Scientist.science("mismatched results experiment", new ExperimentFunction<Float, Float>() {
+			@Override
+			public void apply(IExperiment<Float, Float> experiment) {
+				experiment.use(floatSumSupplier(fractionSummer));
+				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
+				experiment.setThrowOnMismatches(false);
+			}
+		});
 	}
 
 	@Test(expected = MismatchException.class)
-	@Ignore
 	public void testExceptionDueToMismatchedExperiments() {
-		fail();
+		final FractionSummer fractionSummer = getFloatFractionSum();
+		
+		Scientist.science("mismatched results experiment", new ExperimentFunction<Float, Float>() {
+			@Override
+			public void apply(IExperiment<Float, Float> experiment) {
+				experiment.use(floatSumSupplier(fractionSummer));
+				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
+				experiment.setThrowOnMismatches(true);
+			}
+		});
 	}
 
 	@Test
-	@Ignore
+	@Ignore("This is broken")
 	public void testIgnoreMismatchedExperiment() {
-		fail();
+		// Setup
+		@SuppressWarnings("unchecked")
+		final DoubleFunction<Float, Float, Boolean> ignoreMismatches = mock(DoubleFunction.class);
+		when(ignoreMismatches.apply(anyFloat(), anyFloat())).thenReturn(true);
+		
+		// Execute
+		final FractionSummer fractionSummer = getFloatFractionSum();
+		
+		Scientist.science("ignored mismatched results experiment", new ExperimentFunction<Float, Float>() {
+			@Override
+			public void apply(IExperiment<Float, Float> experiment) {
+				experiment.use(floatSumSupplier(fractionSummer));
+				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
+				experiment.setThrowOnMismatches(true);
+				experiment.ignore(ignoreMismatches);
+			}
+		});
+		
+		// Verify
+		verify(ignoreMismatches).apply(anyFloat(), anyFloat());
 	}
 }

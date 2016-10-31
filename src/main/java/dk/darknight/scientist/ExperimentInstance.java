@@ -1,8 +1,19 @@
 package dk.darknight.scientist;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.*;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
@@ -115,51 +126,6 @@ final class ExperimentInstance<T, TClean> {
 		// Randomize ordering...
 		Collections.shuffle(behaviors);
 
-		List<Observation<T, TClean>> observations = new ArrayList<>();
-
-		// ... don't break tasks into batches of "ConcurrentTasks" size ... just run then in sequence :)
-		Observation<T, TClean> controlObservation = null;
-		for (NamedBehavior<T> b : behaviors) {
-			@SuppressWarnings("unchecked")
-			Observation<T, TClean> o = (Observation<T, TClean>) Observation.of(b.getName(), b.getBehavior(), thrown,
-					cleaner);
-			observations.add(o);
-			if (CONTROL_EXPERIMENT_NAME.equals(o.getName()))
-				controlObservation = o;
-		}
-
-		Result<T, TClean> result = new Result<T, TClean>(this, observations, controlObservation, contexts);
-
-		try {
-			Scientist.getResultPublisher().publish(result);
-		} catch (Exception e) {
-			thrown.apply(Operation.PUBLISH, e);
-		}
-
-		if (throwOnMismatches && result.isMismatched()) {
-			throw new MismatchException(name, result);
-		}
-
-		if (controlObservation.isThrown()) {
-			throw Throwables.propagate(controlObservation.getException());
-		}
-
-		return controlObservation.getValue();
-	}
-
-	public T runParallel() {
-		// Determine if experiments should be run.
-		if (!shouldExperimentRun()) {
-			return behaviors.get(0).getBehavior().get();
-		}
-
-		if (beforeRun != null) {
-			beforeRun.apply(null);
-		}
-
-		// Randomize ordering...
-		Collections.shuffle(behaviors);
-
 		// Break tasks into batches of "ConcurrentTasks" size
 		final List<Future<Observation<T, TClean>>> observations = new ArrayList<>();
 		final List<String> observationNames = new ArrayList<>();
@@ -229,12 +195,8 @@ final class ExperimentInstance<T, TClean> {
 						try {
 							List<Observation<T, TClean>> os = resolveObservationFutures(observations, observationNames, xs);
 							result = new Result<T, TClean>(instance, os, controlObservation, contexts);
-							try {
-								Scientist.getResultPublisher().publish(result);
-							} catch (Exception e) {
-								thrown.apply(Operation.PUBLISH, e);
-							}
-						} catch (InterruptedException | ExecutionException e) {
+							Scientist.getResultPublisher().publish(result);
+						} catch (Exception e) {
 							thrown.apply(Operation.PUBLISH, e);
 						}
 						return result;

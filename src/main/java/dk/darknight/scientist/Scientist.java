@@ -52,15 +52,13 @@ public class Scientist {
 	 * @return The value of the experiment's control function.
 	 */
 	public static <T, TClean> T science(@NonNull String name, @NonNull ExperimentFunction<T, TClean> experiment) {
-		val builder = build(name, 1, experiment);
-		builder.clean(Scientist.<TClean, T>getDefaultCleaner());
-		return builder.build().run();
+		return science(name, 1, experiment);
 	}
 
 	public static <T, TClean> T science(@NonNull String name, int concurrentTasks, @NonNull ExperimentFunction<T, TClean> experiment) {
 		val builder = build(name, concurrentTasks, experiment);
 		builder.clean(Scientist.<TClean, T>getDefaultCleaner());
-		return builder.build().runParallel();
+		return builder.build().run();
 	}
 
 	public static void setEnabled(@NonNull Supplier<Boolean> enabled) {
