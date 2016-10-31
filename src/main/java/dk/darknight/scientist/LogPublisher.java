@@ -2,13 +2,25 @@ package dk.darknight.scientist;
 
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.NonNull;
 
-@Slf4j
-class LogPublisher implements IResultPublisher {
+public class LogPublisher implements IResultPublisher {
+	public static final LogPublisher DEFAULT = new LogPublisher(); 
+	private final Logger log;
+	
+	private LogPublisher() {
+		log = LoggerFactory.getLogger(LogPublisher.class);
+	}
+		
+	public LogPublisher(@NonNull Logger log) {
+		this.log = log;
+	}
 
 	@Override
 	public <T, TClean> void publish(Result<T, TClean> result) {

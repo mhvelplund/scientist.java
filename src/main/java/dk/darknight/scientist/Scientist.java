@@ -20,7 +20,7 @@ import lombok.val;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class Scientist {
 	private static Supplier<Boolean> enabled = Suppliers.ofInstance(true);
-	private static IResultPublisher resultPublisher = new LogPublisher();
+	private static IResultPublisher resultPublisher = LogPublisher.DEFAULT;
 
 	private static <T, TClean> Experiment<T, TClean> build(String name, int concurrentTasks,
 			ExperimentFunction<T, TClean> experiment) {
@@ -34,7 +34,7 @@ public class Scientist {
 		return (Function<T, TClean>) Functions.identity();
 	}
 
-	public static IResultPublisher getResultPublisher() {
+	static IResultPublisher getResultPublisher() {
 		synchronized (resultPublisher) {
 			return resultPublisher;
 		}
