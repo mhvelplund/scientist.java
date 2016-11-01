@@ -11,7 +11,7 @@ import dk.darknight.scientist.functions.DoubleFunction;
 import lombok.NonNull;
 
 class Experiment<T, TClean> implements IExperiment<T, TClean> {
-	private final class DefaultComparator implements Comparator<T> {
+	private final static class DefaultComparator<T> implements Comparator<T> {
 		private static final int EQUAL = 0;
 		private static final int NOT_EQUAL = -1; // False is always -1, regardless of actual result
 
@@ -37,7 +37,7 @@ class Experiment<T, TClean> implements IExperiment<T, TClean> {
 	private Action<Void> beforeRun;
 	private final Map<String, Supplier<T>> candidates;
 	private Function<T, ?> cleaner;
-	private Comparator<T> comparator = new DefaultComparator();
+	private Comparator<T> comparator = new DefaultComparator<T>();
 
 	private final int concurrentTasks;
 	private final Map<String, Object> contexts = new HashMap<>();
