@@ -130,7 +130,7 @@ final class ExperimentInstance<T, TClean> {
 		final List<Future<Observation<T, TClean>>> observations = new ArrayList<>();
 		final List<String> observationNames = new ArrayList<>();
 		Future<Observation<T, TClean>> controlFuture = null;
-		final ExecutorService xs = Executors.newWorkStealingPool(concurrentTasks);
+		final ExecutorService xs = Executors.newFixedThreadPool(concurrentTasks);
 
 		for (NamedBehavior<T> b : behaviors) {
 			@SuppressWarnings("unchecked")
