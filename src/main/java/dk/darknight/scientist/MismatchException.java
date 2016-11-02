@@ -4,7 +4,7 @@ import lombok.Getter;
 
 @Getter
 public class MismatchException extends RuntimeException {
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 6571064759698006300L;
 	private String name;
 	private Result<?, ?> result;
 
