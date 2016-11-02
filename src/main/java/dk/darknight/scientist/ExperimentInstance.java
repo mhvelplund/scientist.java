@@ -12,6 +12,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -130,7 +131,7 @@ final class ExperimentInstance<T, TClean> {
 		final List<Future<Observation<T, TClean>>> observations = new ArrayList<>();
 		final List<String> observationNames = new ArrayList<>();
 		Future<Observation<T, TClean>> controlFuture = null;
-		final ExecutorService xs = Executors.newWorkStealingPool(concurrentTasks);
+		final ExecutorService xs = new ForkJoinPool(concurrentTasks, ForkJoinPool.defaultForkJoinWorkerThreadFactory, null, true);
 
 		for (NamedBehavior<T> b : behaviors) {
 			@SuppressWarnings("unchecked")
