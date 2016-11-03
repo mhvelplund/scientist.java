@@ -30,10 +30,10 @@ class ExperimentSettings<T, TClean> {
 	private Function<T, ?> cleaner;
 	private Comparator<T> comparator;
 	private int concurrentTasks;
-	private Map<String, Object> contexts = new HashMap<>();
+	private Map<String, Object> contexts = new HashMap<String, Object>();
 	private Supplier<T> control;
 	private Supplier<Boolean> enabled;
-	private List<DoubleFunction<T, T, Boolean>> ignores = new ArrayList<>();
+	private List<DoubleFunction<T, T, Boolean>> ignores = new ArrayList<DoubleFunction<T,T,Boolean>>();
 	private String name;
 	private Supplier<Boolean> runIf;
 	private DoubleAction<Operation, Exception> thrown;

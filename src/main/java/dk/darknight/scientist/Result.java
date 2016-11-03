@@ -53,7 +53,7 @@ public class Result<T, TClean> {
 
 	public Result(ExperimentInstance<T, TClean> experiment, List<Observation<T, TClean>> observations,
 			Observation<T, TClean> control, Map<String, Object> contexts) {
-		List<Observation<T, TClean>> tmpCandidates = new ArrayList<>();
+		List<Observation<T, TClean>> tmpCandidates = new ArrayList<Observation<T,TClean>>();
 		tmpCandidates.addAll(observations);
 		tmpCandidates.remove(control);
 		this.candidates = ImmutableList.copyOf(tmpCandidates);
@@ -62,8 +62,8 @@ public class Result<T, TClean> {
 		this.observations = ImmutableList.copyOf(observations);
 		this.contexts = ImmutableMap.copyOf(contexts);
 
-		List<Observation<T, TClean>> tmpMismatchedObservations = new ArrayList<>();
-		List<Observation<T, TClean>> tmpIgnoredObservations = new ArrayList<>();
+		List<Observation<T, TClean>> tmpMismatchedObservations = new ArrayList<Observation<T,TClean>>();
+		List<Observation<T, TClean>> tmpIgnoredObservations = new ArrayList<Observation<T,TClean>>();
 
 		for (Observation<T, TClean> candidate : candidates) {
 			if (!candidate.equivalentTo(control, experiment.getComparator())) {

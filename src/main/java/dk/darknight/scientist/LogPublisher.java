@@ -22,7 +22,6 @@ public class LogPublisher implements IResultPublisher {
 		this.log = log;
 	}
 
-	@Override
 	public <T, TClean> void publish(Result<T, TClean> result) {
 		final ImmutableList<Observation<T, TClean>> mismatchedObservations = result.getMismatchedObservations();
 		final ImmutableList<Observation<T, TClean>> observations = result.getObservations();

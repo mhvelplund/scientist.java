@@ -31,7 +31,6 @@ class Observation<T, TClean> {
 	public static <T, TClean> Future<Observation<T, TClean>> of(ExecutorService xs, final String name,
 			final Supplier<T> block, final DoubleAction<Operation, Exception> thrown, final Function<T, TClean> cleaner) {
 		return xs.submit(new Callable<Observation<T, TClean>>() {
-			@Override
 			public Observation<T, TClean> call() throws Exception {
 				return of(name, block, thrown, cleaner);
 			}

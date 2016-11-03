@@ -1,9 +1,17 @@
 package dk.darknight.scientist;
 
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import com.google.common.base.*;
+import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.base.Throwables;
 
 import dk.darknight.scientist.functions.Action;
 import dk.darknight.scientist.functions.DoubleAction;
@@ -15,7 +23,6 @@ class Experiment<T, TClean> implements IExperiment<T, TClean> {
 		private static final int EQUAL = 0;
 		private static final int NOT_EQUAL = -1; // False is always -1, regardless of actual result
 
-		@Override
 		public int compare(T o1, T o2) {
 			boolean equal = (o1 == null && o2 == null) || (o1 != null && o1.equals(o2));
 
@@ -28,7 +35,6 @@ class Experiment<T, TClean> implements IExperiment<T, TClean> {
 	private static final Supplier<Boolean> ALWAYS_RUN = Suppliers.ofInstance(true);
 
 	private static final DoubleAction<Operation, Exception> ALWAYS_THROW = new DoubleAction<Operation, Exception>() {
-		@Override
 		public Void apply(Operation op, Exception exception) {
 			throw Throwables.propagate(exception);
 		}
@@ -40,10 +46,10 @@ class Experiment<T, TClean> implements IExperiment<T, TClean> {
 	private Comparator<T> comparator = new DefaultComparator<T>();
 
 	private final int concurrentTasks;
-	private final Map<String, Object> contexts = new HashMap<>();
+	private final Map<String, Object> contexts = new HashMap<String, Object>();
 	private Supplier<T> control;
 	private final Supplier<Boolean> enabled;
-	private final List<DoubleFunction<T, T, Boolean>> ignores = new ArrayList<>();
+	private final List<DoubleFunction<T, T, Boolean>> ignores = new ArrayList<DoubleFunction<T, T, Boolean>>();
 	private final String name;
 	private Supplier<Boolean> runIf = ALWAYS_RUN;
 	private DoubleAction<Operation, Exception> thrown = ALWAYS_THROW;
@@ -57,12 +63,10 @@ class Experiment<T, TClean> implements IExperiment<T, TClean> {
 		this.concurrentTasks = concurrentTasks;
 	}
 
-	@Override
 	public void addContext(@NonNull String key, Object value) {
 		contexts.put(key, value);
 	}
 
-	@Override
 	public void attempt(@NonNull String name, @NonNull Supplier<T> candidate) {
 		if (candidates.containsKey(name)) {
 			throw new IllegalArgumentException(MessageFormat
@@ -71,7 +75,6 @@ class Experiment<T, TClean> implements IExperiment<T, TClean> {
 		candidates.put(name, candidate);
 	}
 
-	@Override
 	public void attempt(@NonNull Supplier<T> candidate) {
 		if (candidates.containsKey(CANDIDATE_EXPERIMENT_NAME)) {
 			throw new IllegalArgumentException("You have already added a default try. "
@@ -80,52 +83,43 @@ class Experiment<T, TClean> implements IExperiment<T, TClean> {
 		candidates.put(CANDIDATE_EXPERIMENT_NAME, candidate);
 	}
 
-	@Override
 	public void beforeRun(@NonNull Action<Void> action) {
 		this.beforeRun = action;
 	}
 
 	public ExperimentInstance<T, TClean> build() {
-		return new ExperimentInstance<>(new ExperimentSettings<T, TClean>(beforeRun, candidates, cleaner, comparator,
+		return new ExperimentInstance<T, TClean>(new ExperimentSettings<T, TClean>(beforeRun, candidates, cleaner, comparator,
 				concurrentTasks, contexts, control, enabled, ignores, name, runIf, thrown, throwOnMismatches));
 	}
 
-	@Override
 	public void clean(@NonNull Function<T, TClean> cleaner) {
 		this.cleaner = cleaner;
 	}
 
-	@Override
 	public void compare(@NonNull Comparator<T> comparator) {
 		this.comparator = comparator;
 	}
 
-	@Override
 	public void ignore(@NonNull DoubleFunction<T, T, Boolean> block) {
 		this.ignores.add(block);
 	}
 
-	@Override
 	public boolean isThrowOnMismatches() {
 		return throwOnMismatches;
 	}
 
-	@Override
 	public void runIf(@NonNull Supplier<Boolean> check) {
 		this.runIf = check;
 	}
 
-	@Override
 	public void setThrowOnMismatches(boolean throwOnMismatches) {
 		this.throwOnMismatches = throwOnMismatches;
 	}
 
-	@Override
 	public void thrown(@NonNull DoubleAction<Operation, Exception> block) {
 		this.thrown = block;
 	}
 
-	@Override
 	public void use(@NonNull Supplier<T> control) {
 		this.control = control;
 	}

@@ -1,20 +1,8 @@
 package dk.darknight.scientist;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
@@ -59,15 +47,15 @@ final class ExperimentInstance<T, TClean> {
 	private final Function<T, ?> cleaner;
 	private final Comparator<T> comparator;
 	private final int concurrentTasks;
-	private final Map<String, Object> contexts = new HashMap<>();
+	private final Map<String, Object> contexts = new HashMap<String, Object>();
 	private final Supplier<T> control;
 	private final Supplier<Boolean> enabled;
-	private final List<DoubleFunction<T, T, Boolean>> ignores = new ArrayList<>();
+	private final List<DoubleFunction<T, T, Boolean>> ignores = new ArrayList<DoubleFunction<T,T,Boolean>>();
 	private final String name;
 	private final Supplier<Boolean> runIf;
 	private final DoubleAction<Operation, Exception> thrown;
 	private final boolean throwOnMismatches;
-	private final List<NamedBehavior<T>> behaviors = new ArrayList<>();
+	private final List<NamedBehavior<T>> behaviors = new ArrayList<ExperimentInstance.NamedBehavior<T>>();
 
 	public ExperimentInstance(ExperimentSettings<T, TClean> settings) {
 		name = settings.getName();
@@ -82,11 +70,11 @@ final class ExperimentInstance<T, TClean> {
 		thrown = settings.getThrown();
 		throwOnMismatches = settings.isThrowOnMismatches();
 
-		behaviors.add(new NamedBehavior<>(CONTROL_EXPERIMENT_NAME, settings.getControl()));
+		behaviors.add(new NamedBehavior<T>(CONTROL_EXPERIMENT_NAME, settings.getControl()));
 
 		Set<Entry<String, Supplier<T>>> entrySet = candidates.entrySet();
 		for (Entry<String, Supplier<T>> entry : entrySet) {
-			behaviors.add(new NamedBehavior<>(entry.getKey(), entry.getValue()));
+			behaviors.add(new NamedBehavior<T>(entry.getKey(), entry.getValue()));
 		}
 	}
 
@@ -128,10 +116,10 @@ final class ExperimentInstance<T, TClean> {
 		Collections.shuffle(behaviors);
 
 		// Break tasks into batches of "ConcurrentTasks" size
-		final List<Future<Observation<T, TClean>>> observations = new ArrayList<>();
-		final List<String> observationNames = new ArrayList<>();
+		final List<Future<Observation<T, TClean>>> observations = new ArrayList<Future<Observation<T,TClean>>>();
+		final List<String> observationNames = new ArrayList<String>();
 		Future<Observation<T, TClean>> controlFuture = null;
-		final ExecutorService xs = new ForkJoinPool(concurrentTasks, ForkJoinPool.defaultForkJoinWorkerThreadFactory, null, true);
+		final ExecutorService xs = Executors.newFixedThreadPool(concurrentTasks);
 
 		for (NamedBehavior<T> b : behaviors) {
 			@SuppressWarnings("unchecked")
@@ -150,7 +138,7 @@ final class ExperimentInstance<T, TClean> {
 		final Observation<T, TClean> controlObservation;
 		try {
 			controlObservation = controlFuture.get();
-		} catch (InterruptedException | ExecutionException e) {
+		} catch (Exception e) {
 			throw Throwables.propagate(e);
 		}
 
@@ -160,7 +148,7 @@ final class ExperimentInstance<T, TClean> {
 			Result<T, TClean> r;
 			try {
 				r = result.get();
-			} catch (InterruptedException | ExecutionException e) {
+			} catch (Exception e) {
 				throw Throwables.propagate(e);
 			}
 			if (r.isMismatched()) {
@@ -190,7 +178,6 @@ final class ExperimentInstance<T, TClean> {
 			final ExperimentInstance<T, TClean> instance) {
 		Future<Result<T, TClean>> result = Executors.newSingleThreadScheduledExecutor()
 				.submit(new Callable<Result<T, TClean>>() {
-					@Override
 					public Result<T, TClean> call() throws Exception {
 						Result<T, TClean> result = null;
 						try {
@@ -212,7 +199,7 @@ final class ExperimentInstance<T, TClean> {
 		if (xs.awaitTermination(CANDIDATE_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
 			xs.shutdownNow();
 		}
-		List<Observation<T, TClean>> os = new ArrayList<>();
+		List<Observation<T, TClean>> os = new ArrayList<Observation<T,TClean>>();
 		for (int i = 0; i < observations.size(); i++) {
 			Future<Observation<T, TClean>> f = observations.get(i);
 			Observation<T, TClean> o;
@@ -232,7 +219,7 @@ final class ExperimentInstance<T, TClean> {
 		}
 
 		try {
-			List<DoubleFunction<?, ?, ?>> results = new ArrayList<>();
+			List<DoubleFunction<?, ?, ?>> results = new ArrayList<DoubleFunction<?,?,?>>();
 			for (DoubleFunction<T, T, Boolean> i : ignores) {
 				if (i.apply(control.getValue(), candidate.getValue())) {
 					results.add(i);

@@ -1,15 +1,16 @@
 package dk.darknight.scientist;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyFloat;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -37,7 +38,6 @@ public class ScientistTest {
 			this.fractionSummer = fractionSummer;
 		}
 
-		@Override
 		public void apply(IExperiment<Float, Float> experiment) {
 			experiment.use(floatSumSupplier(fractionSummer));
 			experiment.attempt("intSummer", intSumSupplier(fractionSummer));
@@ -48,7 +48,6 @@ public class ScientistTest {
 
 	private Supplier<Float> floatSumSupplier(final FractionSummer fractionSummer) {
 		return new Supplier<Float>() {
-			@Override
 			public Float get() {
 				return fractionSummer.getFloatSum();
 			}
@@ -77,7 +76,6 @@ public class ScientistTest {
 
 	private Supplier<Float> intSumSupplier(final FractionSummer fractionSummer) {
 		return new Supplier<Float>() {
-			@Override
 			public Float get() {
 				return (float) fractionSummer.getIntSum();
 			}
@@ -97,7 +95,6 @@ public class ScientistTest {
 		final FractionSummer fractionSummer = getIntegerFractionSum();
 
 		Scientist.science("beforeRun experiment", new ExperimentFunction<Float, Float>() {
-			@Override
 			public void apply(IExperiment<Float, Float> experiment) {
 				experiment.use(floatSumSupplier(fractionSummer));
 				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
@@ -111,7 +108,6 @@ public class ScientistTest {
 	@Test(expected = UnsupportedOperationException.class)
 	public void testBeforeRunException() {
 		final Action<Void> beforeRun = new Action<Void>() {
-			@Override
 			public Void apply(Void input) {
 				throw new UnsupportedOperationException();
 			}
@@ -120,7 +116,6 @@ public class ScientistTest {
 		final FractionSummer fractionSummer = getIntegerFractionSum();
 
 		Scientist.science("beforeRun experiment", new ExperimentFunction<Float, Float>() {
-			@Override
 			public void apply(IExperiment<Float, Float> experiment) {
 				experiment.use(floatSumSupplier(fractionSummer));
 				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
@@ -140,7 +135,6 @@ public class ScientistTest {
 
 		Scientist.setEnabled(throwsUnsupportedOperationExceptions());
 		Scientist.science("enabled-exception experiment", new ExperimentFunction<Float, Float>() {
-			@Override
 			public void apply(IExperiment<Float, Float> experiment) {
 				experiment.use(floatSumSupplier(fractionSummer));
 				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
@@ -192,7 +186,6 @@ public class ScientistTest {
 		Scientist.setResultPublisher(logPublisher);
 		final FractionSummer fractionSummer = getIntegerFractionSum();
 		Scientist.science("set publisher experiment", new ExperimentFunction<Float, Float>() {
-			@Override
 			public void apply(IExperiment<Float, Float> experiment) {
 				experiment.use(floatSumSupplier(fractionSummer));
 				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
@@ -215,7 +208,6 @@ public class ScientistTest {
 		final FractionSummer fractionSummer = getIntegerFractionSum();
 
 		Scientist.science("unhandled runIf-exception experiment", new ExperimentFunction<Float, Float>() {
-			@Override
 			public void apply(IExperiment<Float, Float> experiment) {
 				experiment.use(floatSumSupplier(fractionSummer));
 				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
@@ -233,7 +225,6 @@ public class ScientistTest {
 	/** Utility {@link Supplier} that always throws an exception. */
 	private Supplier<Boolean> throwsUnsupportedOperationExceptions() {
 		return new Supplier<Boolean>() {
-			@Override
 			public Boolean get() {
 				throw new UnsupportedOperationException();
 			}
@@ -253,7 +244,6 @@ public class ScientistTest {
 		Scientist.setResultPublisher(logPublisher);
 		final FractionSummer fractionSummer = getIntegerFractionSum();
 		Scientist.science("publishing fails experiment", new ExperimentFunction<Float, Float>() {
-			@Override
 			public void apply(IExperiment<Float, Float> experiment) {
 				experiment.use(floatSumSupplier(fractionSummer));
 				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
@@ -272,7 +262,6 @@ public class ScientistTest {
 		final FractionSummer fractionSummer = getFloatFractionSum();
 		
 		Scientist.science("mismatched results experiment", new ExperimentFunction<Float, Float>() {
-			@Override
 			public void apply(IExperiment<Float, Float> experiment) {
 				experiment.use(floatSumSupplier(fractionSummer));
 				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
@@ -286,7 +275,6 @@ public class ScientistTest {
 		final FractionSummer fractionSummer = getFloatFractionSum();
 		
 		Scientist.science("mismatched results experiment", new ExperimentFunction<Float, Float>() {
-			@Override
 			public void apply(IExperiment<Float, Float> experiment) {
 				experiment.use(floatSumSupplier(fractionSummer));
 				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
@@ -307,7 +295,6 @@ public class ScientistTest {
 		final FractionSummer fractionSummer = getFloatFractionSum();
 		
 		Scientist.science("ignored mismatched results experiment", new ExperimentFunction<Float, Float>() {
-			@Override
 			public void apply(IExperiment<Float, Float> experiment) {
 				experiment.use(floatSumSupplier(fractionSummer));
 				experiment.attempt("intSummer", intSumSupplier(fractionSummer));
