@@ -18,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 
 import dk.darknight.scientist.functions.Action;
 import dk.darknight.scientist.functions.DoubleAction;
@@ -151,7 +150,7 @@ final class ExperimentInstance<T, TClean> {
 		try {
 			controlObservation = controlFuture.get();
 		} catch (InterruptedException | ExecutionException e) {
-			throw Throwables.propagate(e);
+			throw new RuntimeException(e);
 		}
 
 		Future<Result<T, TClean>> result = publishAsynchronously(observations, observationNames, xs, controlObservation, this);
@@ -161,7 +160,7 @@ final class ExperimentInstance<T, TClean> {
 			try {
 				r = result.get();
 			} catch (InterruptedException | ExecutionException e) {
-				throw Throwables.propagate(e);
+				throw new RuntimeException(e);
 			}
 			if (r.isMismatched()) {
 				throw new MismatchException(name, r);
@@ -169,7 +168,7 @@ final class ExperimentInstance<T, TClean> {
 		}
 
 		if (controlObservation.isThrown()) {
-			throw Throwables.propagate(controlObservation.getException());
+			throw new RuntimeException(controlObservation.getException());
 		}
 
 		return controlObservation.getValue();
