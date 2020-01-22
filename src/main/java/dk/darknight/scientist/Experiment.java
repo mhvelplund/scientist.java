@@ -30,7 +30,7 @@ class Experiment<T, TClean> implements IExperiment<T, TClean> {
 	private static final DoubleAction<Operation, Exception> ALWAYS_THROW = new DoubleAction<Operation, Exception>() {
 		@Override
 		public Void apply(Operation op, Exception exception) {
-			throw Throwables.propagate(exception);
+			throw new RuntimeException(exception);
 		}
 	};
 

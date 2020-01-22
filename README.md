@@ -9,10 +9,6 @@ library. Credits for good things should go to these guys, while blame for bugs
 belongs solely to me -- not legally though, see 
 [LICENSE](https://github.com/mhvelplund/scientist.java/blob/master/LICENSE) ;)
 
-The code is written to be compatible with Java 7 because not everyone gets to 
-work with nice clean new code, but attempts have been made to make it lambda 
-friendly for Java 8 users (lucky bastards!).
-
 ## Why a port of a port?
 
 The code-base I work with in my day job is a Java back-end with a .NET desktop 
@@ -25,38 +21,7 @@ asynchronous experiments. Java doesn't have the same ``asynch`` / ``await``
 language features, so that functionality would require some extra thought. 
 Another difference is that "Try()" is now "attempt()".
 
-Java 7 example:
-
-    public class ScientistTest {
-    	boolean isNotCollaborator(String name) { return true; }
-    	boolean isHasAccess(String name) { return true; }
-    
-    	@Test
-    	public void testScience() {
-    		final String user = "jdoe";
-    		boolean isCollaborator = Scientist.science("widget-permissions", new ExperimentFunction<Boolean>() {
-    			public void apply(IExperiment<Boolean> experiment) {
-    				experiment.use(new Supplier<Boolean>() {
-    					public Boolean get() {
-    						return isNotCollaborator(user);
-    					}
-    				});
-    
-    				experiment.attempt(new Supplier<Boolean>() {
-    					public Boolean get() {
-    						return isHasAccess(user);
-    					}
-    				});
-    				
-    				experiment.setThrowOnMismatches(true);
-    			}
-    		});
-    
-    		assertTrue(isCollaborator);
-    	}
-    }    
-
-Java 8 example:
+Example:
 
     public class ScientistTest {
     	boolean isNotCollaborator(String name) { return true; }
@@ -83,4 +48,3 @@ for a full description of how to setup experiments (the API in Java is the same)
 This project uses [Project Lombok](https://projectlombok.org/) for boilerplate code. 
 It will compile fine with Maven, but if you want to edit the sources in an IDE, you 
 will need the [Project Lombok plugin](https://projectlombok.org/download.html).
-
