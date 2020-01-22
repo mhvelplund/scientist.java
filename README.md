@@ -1,6 +1,7 @@
 # Scientist for Java
 
-<a href="https://travis-ci.org/mhvelplund/scientist.java"><img src="https://travis-ci.org/mhvelplund/scientist.java.svg?branch=master" alt="CI status"/></a>
+[![Actions Status](https://github.com/mhvelplund/scientist.java/workflows/Java%20CI/badge.svg)](https://github.com/mhvelplund/scientist.java/actions)
+
 
 A quick and nasty port of the [Scientist.net](https://github.com/github/Scientist.net) 
 (commit #[bf32144](https://github.com/github/Scientist.net/commit/bf321444af36d2982744cc1f8b9c4c5a329b9bb2)) 
